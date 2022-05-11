@@ -4,6 +4,7 @@
 library(shiny)
 library(rgdal)
 library(rgeos)
+library(sf)
 library(tmap)
 library(leaflet)
 library(vioplot)
@@ -28,7 +29,7 @@ ui <- fluidPage(
                                  "Unemployment",
                                  "Low Occupancy", 
                                  "White British"),
-                  selected = "Qualification"),
+                  selected = "Low Occupancy"),
       
       h4("About"),
       p("Here's a paragraph description about the project."),
@@ -45,7 +46,8 @@ ui <- fluidPage(
       # Output: Tabset w/ plot, summary, and table ----
       tabsetPanel(type = "tabs",
                   tabPanel("Map", leafletOutput("working_map")),
-                  tabPanel("Violin Plot", plotOutput("vioplot"))
+                  tabPanel("Violin Plot", plotOutput("vioplot")),
+                  tabPanel("Summary Stats", plotOutput("sum"))
 
       )
       
@@ -56,16 +58,15 @@ ui <- fluidPage(
 # Define server logic for random distribution app ----
 server <- function(input, output) {
   
- # output$selected_var <- renderText({ 
- #   paste("You have selected", input$Census_var)
- # })
+#  output$selected_var <- renderText({ 
+#    paste("You have selected", input$Census_var)
+#  })
   
-  CamdenData <- readOGR(".","Camden")
+  CamdenData <- read_sf("Camden.shp")
 
 
   output$working_map <- renderLeaflet({
     
-    #CamdenData <- readOGR(".","Camden")
     
     data <- switch(input$Census_var, 
                             "Qualification" = "Qulfctn",
@@ -85,7 +86,9 @@ server <- function(input, output) {
                               "Low Occupancy" = "% Low Occupancy",
                               "White British" = "% White British")
     
-    working_map <- tm_shape(CamdenData) + tm_fill(data, title=input$Census_var, style="jenks")
+    ## CHALLENGE 1 -- Use Leaflet directly instead
+    working_map <- tm_shape(CamdenData) + 
+      tm_fill(data, title=input$Census_var, style="jenks")
     tmap_leaflet(working_map)
     
   })
@@ -93,16 +96,22 @@ server <- function(input, output) {
   
   
   # Generate summary of table
-  #output$sum <- renderPrint({
-    
-    #CamdenData <- readOGR(".","Camden")
+  ## CHALLENGE 2 -- Get summary statistics (or some other viz) to work in tab
   
-  #  summary(CamdenData@data[,2:5])
-  # })
+  output$sum <- renderPrint({
+    
+    summary(CamdenData[,2:5])
+   })
+  
+  
   
   #Generate a Violin Plot of Variables 
   output$vioplot <- renderPlot({
-  vioplot(Census.Data$Unemployed, Census.Data$Qualification, Census.Data$White_British, Census.Data$Low_Occupancy, ylim=c(0,100), col = "dodgerblue", rectCol="dodgerblue3", colMed="dodgerblue4", names=c("Unemployed", "Qualifications", "White British", "Occupancy"))
+    vioplot(CamdenData$Unmplyd, CamdenData$Qulfctn, 
+            CamdenData$Wht_Brt, CamdenData$Lw_Occp, 
+            ylim=c(0,100), col = "dodgerblue", rectCol="dodgerblue3", 
+            colMed="dodgerblue4", names=c("Unemployed", "Qualifications", 
+                                          "White British", "Occupancy"))
   })
 }
 
